@@ -1,7 +1,20 @@
 import React from 'react'
 import { Code } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
 
 const Navbar = () => {
+  const navigate = useNavigate();
+
+  const handleSignUpClick = (e) => {
+    e.preventDefault()
+    navigate('/login')
+  }
+  
+  const handleLoginClick = (e) => {
+    e.preventDefault()
+    navigate('/signup')
+  }
+
   return (
     <div>
       {/* Navbar */}
@@ -13,15 +26,15 @@ const Navbar = () => {
               <span className="text-xl font-semibold">BITLINGUALS</span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#" className="text-gray-600 hover:text-gray-900">Home</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">Events</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">Projects</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">Resources</a>
-              <a href="#" className="text-gray-600 hover:text-gray-900">About</a>
+              <Link to="/" className="text-gray-600 hover:text-gray-900">Home</Link>
+              <Link to="/events" className="text-gray-600 hover:text-gray-900">Events</Link>
+              <Link to="/projects" className="text-gray-600 hover:text-gray-900">Projects</Link>
+              <Link to="/resources" className="text-gray-600 hover:text-gray-900">Resources</Link>
+              <Link to="/about" className="text-gray-600 hover:text-gray-900">About</Link>
             </div>
             <div className="flex items-center space-x-4">
-              <button className="text-gray-600 hover:text-gray-900">Sign In</button>
-              <button className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800">
+              <button onClick={handleSignUpClick} className="text-gray-600 hover:text-gray-900">Login</button>
+              <button onClick={handleLoginClick} className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800">
                 Join Us
               </button>
             </div>
