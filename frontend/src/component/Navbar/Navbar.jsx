@@ -1,73 +1,101 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { Code, Menu, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+
+const NavLink = ({ to, children, onClick }) => (
+  <Link 
+    to={to} 
+    className="text-gray-600 hover:text-gray-900 transition-colors duration-200"
+    onClick={onClick}
+  >
+    {children}
+  </Link>
+)
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  const handleSignUpClick = (e) => {
+  const handleMenuClose = useCallback(() => {
+    setIsMenuOpen(false)
+  }, [])
+
+  const handleSignUpClick = useCallback((e) => {
     e.preventDefault()
     navigate('/login')
-    setIsMenuOpen(false)
-  }
+    handleMenuClose()
+  }, [navigate])
   
-  const handleLoginClick = (e) => {
+  const handleLoginClick = useCallback((e) => {
     e.preventDefault()
     navigate('/signup')
-    setIsMenuOpen(false)
-  }
+    handleMenuClose()
+  }, [navigate])
+
+  const navLinks = [
+    { to: "/", text: "Home" },
+    { to: "/events", text: "Events" },
+    { to: "/projects", text: "Projects" },
+    { to: "/resources", text: "Resources" },
+    { to: "/about", text: "About" }
+  ]
 
   return (
-    <div>
-      {/* Navbar */}
-      <nav className="fixed w-full bg-white/70 backdrop-blur-md border-b border-gray-100/50 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Code className="h-6 w-6" />
-              <Link to="/" onClick={() => setIsMenuOpen(false)}><span className="text-xl font-semibold">BITLINGUALS</span></Link>
-            </div>
-            
-            {/* Desktop Menu */}
-            <div className="hidden md:flex items-center space-x-8">
-              <Link to="/" className="text-gray-600 hover:text-gray-900">Home</Link>
-              <Link to="/events" className="text-gray-600 hover:text-gray-900">Events</Link>
-              <Link to="/projects" className="text-gray-600 hover:text-gray-900">Projects</Link>
-              <Link to="/resources" className="text-gray-600 hover:text-gray-900">Resources</Link>
-              <Link to="/about" className="text-gray-600 hover:text-gray-900">About</Link>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <button onClick={handleSignUpClick} className="text-gray-600 hover:text-gray-900">Login</button>
-              <button onClick={handleLoginClick} className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800">
-                Join Us
-              </button>
-              {/* Mobile Menu Button - Moved to end */}
-              <button 
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="md:hidden text-gray-600 hover:text-gray-900"
-              >
-                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-              </button>
-            </div>
+    <nav className="fixed w-full bg-white/70 backdrop-blur-md border-b border-gray-100/50 z-50">
+      <div className="container mx-auto px-4 md:px-6 py-3 md:py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+          <div className="flex items-center space-x-2">
+            <Code className="h-5 w-5 md:h-6 md:w-6" />
+            <Link to="/" onClick={handleMenuClose}>
+              <span className="text-lg md:text-xl font-semibold">BITLINGUALS</span>
+            </Link>
+          </div>
+          
+          {/* Desktop Menu */}
+          <div className="hidden md:flex items-center space-x-6 lg:space-x-8">
+            {navLinks.map(({ to, text }) => (
+              <NavLink key={to} to={to}>{text}</NavLink>
+            ))}
           </div>
 
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div className="md:hidden py-4"> 
-              <div className="flex flex-col space-y-3">
-                <Link to="/" className="text-gray-600 hover:text-gray-900" onClick={() => setIsMenuOpen(false)}>Home</Link>
-                <Link to="/events" className="text-gray-600 hover:text-gray-900" onClick={() => setIsMenuOpen(false)}>Events</Link>
-                <Link to="/projects" className="text-gray-600 hover:text-gray-900" onClick={() => setIsMenuOpen(false)}>Projects</Link>
-                <Link to="/resources" className="text-gray-600 hover:text-gray-900" onClick={() => setIsMenuOpen(false)}>Resources</Link>
-                <Link to="/about" className="text-gray-600 hover:text-gray-900" onClick={() => setIsMenuOpen(false)}>About</Link>
-              </div>
-            </div>
-          )}
+          {/* Auth Buttons & Mobile Menu Toggle */}
+          <div className="flex items-center space-x-3 md:space-x-4">
+            <button 
+              onClick={handleSignUpClick} 
+              className="text-gray-600 hover:text-gray-900 text-sm md:text-base transition-colors duration-200"
+            >
+              Login
+            </button>
+            <button 
+              onClick={handleLoginClick} 
+              className="bg-black text-white px-3 py-1.5 md:px-4 md:py-2 rounded-md hover:bg-gray-800 text-sm md:text-base transition-colors duration-200"
+            >
+              Join Us
+            </button>
+            <button 
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden text-gray-600 hover:text-gray-900 transition-colors duration-200"
+            >
+              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
         </div>
-      </nav>
-    </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden py-4 px-2 mt-2 border-t border-gray-100/50"> 
+            <div className="flex flex-col space-y-3">
+              {navLinks.map(({ to, text }) => (
+                <NavLink key={to} to={to} onClick={handleMenuClose}>
+                  {text}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </nav>
   )
 }
 
