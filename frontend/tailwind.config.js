@@ -36,6 +36,22 @@ export default {
       boxShadow: {
         'neu-light': '10px 10px 20px #d9d9d9, -10px -10px 20px #ffffff',
         'neu-dark': '5px 5px 10px #0c0c0c, -5px -5px 10px #262626',
+      },
+      animation: {
+        'fade-in': 'fadeIn 1s ease-in-out',
+        'loading-progress': 'loadingProgress 2s ease-in-out infinite',
+        'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: 0 },
+          '100%': { opacity: 1 },
+        },
+        loadingProgress: {
+          '0%': { width: '0%', marginLeft: '0%' },
+          '50%': { width: '70%', marginLeft: '30%' },
+          '100%': { width: '0%', marginLeft: '100%' },
+        },
       }
     },
   },

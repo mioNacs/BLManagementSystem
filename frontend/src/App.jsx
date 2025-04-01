@@ -7,6 +7,8 @@ import Signup from './component/auth/Signup';
 import LoadingScreen from './component/ui/LoadingScreen';
 import { LoadingProvider, useLoading } from './context/LoadingContext';
 import { ThemeProvider } from './context/ThemeContext';
+import logoLight from './assets/logo.svg';
+import logoDark from './assets/logo-dark.svg';
 
 // Import page components
 import HomePage from './pages/HomePage';
@@ -14,6 +16,7 @@ import EventsPage from './pages/EventsPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ResourcesPage from './pages/ResourcesPage';
 import AboutPage from './pages/AboutPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 // Create layout for auth pages
 const AuthLayout = ({ children }) => {
@@ -43,13 +46,28 @@ const InitialLoadingScreen = () => {
 
   return (
     <div className="fixed inset-0 bg-white dark:bg-dark-bg z-50 flex flex-col items-center justify-center">
-      <div className="mb-8">
-        <div className="w-16 h-1 bg-black dark:bg-white mb-2 animate-pulse"></div>
-        <div className="w-12 h-1 bg-black dark:bg-white ml-4 animate-pulse animation-delay-150"></div>
-        <div className="w-8 h-1 bg-black dark:bg-white ml-8 animate-pulse animation-delay-300"></div>
+      <div className="flex flex-col items-center">
+        {/* Enhanced logo animation */}
+        <div className="relative w-40 h-40 mb-8 flex items-center justify-center">
+          {/* Outer spinner */}
+          <div className="absolute w-full h-full border-4 border-gray-200 dark:border-gray-700 rounded-full"></div>
+          <div className="absolute w-full h-full border-t-4 border-primary-500 dark:border-primary-400 rounded-full animate-spin"></div>
+          
+          {/* Logo */}
+          <div className="relative z-10 w-32 h-32 flex items-center justify-center">
+            <img src={logoLight} alt="BitLinguals Logo" className="w-28 h-28 block dark:hidden" />
+            <img src={logoDark} alt="BitLinguals Logo" className="w-28 h-28 hidden dark:block" />
+          </div>
+        </div>
+        
+        <h2 className="text-3xl font-bold text-black dark:text-white mb-2 animate-fade-in">BitLinguals</h2>
+        <p className="text-gray-600 dark:text-gray-300 animate-fade-in">Building knowledge bridges...</p>
+        
+        {/* Loading indicator */}
+        <div className="mt-8 w-48 h-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div className="h-full bg-primary-500 dark:bg-primary-400 rounded-full animate-loading-progress"></div>
+        </div>
       </div>
-      <h2 className="text-2xl font-bold text-black dark:text-white mb-2 animate-fade-in">BitLinguals</h2>
-      <p className="text-gray-600 dark:text-gray-300 animate-fade-in">Building knowledge bridges...</p>
     </div>
   );
 };
@@ -69,9 +87,9 @@ const ContentArea = () => {
   }, [location.pathname, showLoader, hideLoader]);
   
   return (
-    <div className="relative flex-grow">
+    <div className="relative w-full flex-grow min-h-[50vh]">
       {isLoading && <LoadingScreen />}
-      <div className={isLoading ? 'hidden' : 'block'}>
+      <div className={isLoading ? 'invisible' : 'visible w-full'}>
         <Routes>
           {/* Main site routes */}
           <Route path="/" element={<HomePage />} />
@@ -92,8 +110,8 @@ const ContentArea = () => {
             </AuthLayout>
           } />
           
-          {/* Fallback route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* 404 Not Found route */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </div>
     </div>
@@ -153,7 +171,7 @@ function App() {
   return (
     <ThemeProvider>
       <LoadingProvider>
-        <Router>
+        <Router basename="/BLManagementSystem">
           <AppContent />
         </Router>
       </LoadingProvider>
