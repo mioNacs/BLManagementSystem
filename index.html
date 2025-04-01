@@ -5,8 +5,20 @@
     <link rel="icon" type="image/svg+xml" href="/BLManagementSystem/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BitLinguals</title>
-    <script type="module" crossorigin src="/BLManagementSystem/assets/index-D3EsFt64.js"></script>
-    <link rel="stylesheet" crossorigin href="/BLManagementSystem/assets/index-C4oUezUS.css">
+    <!-- Apply dark mode before any React code runs to prevent flashing -->
+    <script>
+      // Check for saved theme or use system preference
+      const storedTheme = localStorage.getItem('theme');
+      if (storedTheme) {
+        document.documentElement.classList.add(storedTheme);
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.add('light');
+      }
+    </script>
+    <script type="module" crossorigin src="/BLManagementSystem/assets/index-BcWN4NWU.js"></script>
+    <link rel="stylesheet" crossorigin href="/BLManagementSystem/assets/index-DoiwrIom.css">
   </head>
   <body>
     <div id="root"></div>
