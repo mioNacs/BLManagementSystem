@@ -8,8 +8,18 @@
   }
   
   body {
-    @apply bg-white text-gray-900;
+    @apply bg-white text-gray-900 transition-colors duration-200;
   }
+  
+  /* Dark mode styles */
+  html.dark body {
+    @apply bg-dark-bg text-dark-text-primary;
+  }
+}
+
+/* Define theme transition classes */
+.transition-theme {
+  @apply transition-colors duration-300 ease-in-out;
 }
 
 @layer utilities {

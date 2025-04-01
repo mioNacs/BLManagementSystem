@@ -4,8 +4,10 @@ import Section from '../component/hero/Section';
 
 const HomePage = () => {
   return (
-    <div className="pt-16">
-      <Hero />
+    <div className="bg-white dark:bg-dark-bg transition-colors duration-300">
+      <div className="pt-16 min-h-screen">
+        <Hero />
+      </div>
       <Section />
     </div>
   );
