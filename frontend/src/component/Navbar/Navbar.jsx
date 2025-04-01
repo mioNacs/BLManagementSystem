@@ -1,10 +1,11 @@
 import React, { useState, useCallback } from 'react'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, User, LogOut } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import ThemeToggle from '../ui/ThemeToggle'
 import lightLogo from '../../assets/logo.svg'
 import darkLogo from '../../assets/logo-dark.svg'
 import { useTheme } from '../../context/ThemeContext'
+import { useAuth } from '../../context/AuthContext'
 
 const NavLink = ({ to, children, onClick }) => (
   <Link 
@@ -18,8 +19,10 @@ const NavLink = ({ to, children, onClick }) => (
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const navigate = useNavigate();
   const { isDarkMode } = useTheme();
+  const { user, logout, isAuthenticated } = useAuth();
 
   const handleMenuClose = useCallback(() => {
     setIsMenuOpen(false)
@@ -36,6 +39,21 @@ const Navbar = () => {
     navigate('/signup')
     handleMenuClose()
   }, [navigate, handleMenuClose])
+
+  const handleLogout = useCallback(async (e) => {
+    e.preventDefault();
+    try {
+      await logout();
+      navigate('/');
+      handleMenuClose();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  }, [logout, navigate, handleMenuClose]);
+
+  const toggleProfileDropdown = useCallback(() => {
+    setIsProfileDropdownOpen(prev => !prev);
+  }, []);
 
   const navLinks = [
     { to: "/", text: "Home" },
@@ -74,26 +92,76 @@ const Navbar = () => {
             {/* Theme toggle button */}
             <ThemeToggle />
             
-            {/* Mobile menu button moved before Join Us button */}
+            {/* Mobile menu button */}
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="md:hidden text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary transition-colors duration-200 mr-1"
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isMenuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
             </button>
             
-            <button 
-              onClick={handleLoginClick} 
-              className="hidden sm:block text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary text-sm md:text-base transition-colors duration-200"
-            >
-              Login
-            </button>
-            <button 
-              onClick={handleSignUpClick} 
-              className="bg-primary-600 dark:bg-primary-700 text-white px-2 py-1.5 sm:px-3 md:px-4 md:py-2 rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 text-sm md:text-base transition-colors duration-200 whitespace-nowrap"
-            >
-              Join Us
-            </button>
+            {/* Authentication buttons - conditionally rendered */}
+            {isAuthenticated ? (
+              <div className="relative">
+                <button 
+                  onClick={toggleProfileDropdown}
+                  className="flex items-center text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary text-sm md:text-base transition-colors duration-200"
+                  aria-label="User menu"
+                  aria-expanded={isProfileDropdownOpen}
+                >
+                  <User className="h-5 w-5 mr-1" aria-hidden="true" />
+                  <span className="hidden sm:inline-block">{user?.username}</span>
+                </button>
+                
+                {/* Profile dropdown */}
+                {isProfileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-dark-card shadow-lg rounded-md py-1 z-50">
+                    <div className="px-4 py-2 text-sm text-gray-700 dark:text-dark-text-secondary border-b border-gray-100 dark:border-dark-border">
+                      Signed in as <span className="font-medium">{user?.username}</span>
+                    </div>
+                    <Link 
+                      to="/profile" 
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                    >
+                      Your Profile
+                    </Link>
+                    <Link 
+                      to="/settings" 
+                      className="block px-4 py-2 text-sm text-gray-700 dark:text-dark-text-secondary hover:bg-gray-100 dark:hover:bg-dark-bg"
+                      onClick={() => setIsProfileDropdownOpen(false)}
+                    >
+                      Settings
+                    </Link>
+                    <button 
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-dark-bg"
+                    >
+                      <div className="flex items-center">
+                        <LogOut className="h-4 w-4 mr-1" aria-hidden="true" />
+                        Logout
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <button 
+                  onClick={handleLoginClick} 
+                  className="hidden sm:block text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary text-sm md:text-base transition-colors duration-200"
+                >
+                  Login
+                </button>
+                <button 
+                  onClick={handleSignUpClick} 
+                  className="bg-primary-600 dark:bg-primary-700 text-white px-2 py-1.5 sm:px-3 md:px-4 md:py-2 rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 text-sm md:text-base transition-colors duration-200 whitespace-nowrap"
+                >
+                  Join Us
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -106,13 +174,43 @@ const Navbar = () => {
                   {text}
                 </NavLink>
               ))}
+              
+              {/* Mobile authentication options */}
               <div className="pt-2 border-t border-gray-100/50 dark:border-dark-border/50">
-                <button 
-                  onClick={handleLoginClick} 
-                  className="block sm:hidden w-full text-left py-2 text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
-                >
-                  Login
-                </button>
+                {isAuthenticated ? (
+                  <>
+                    <Link 
+                      to="/profile" 
+                      className="block w-full text-left py-2 text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
+                      onClick={handleMenuClose}
+                    >
+                      Your Profile
+                    </Link>
+                    <Link 
+                      to="/settings" 
+                      className="block w-full text-left py-2 text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
+                      onClick={handleMenuClose}
+                    >
+                      Settings
+                    </Link>
+                    <button 
+                      onClick={handleLogout} 
+                      className="block w-full text-left py-2 text-red-600 dark:text-red-400"
+                    >
+                      <div className="flex items-center">
+                        <LogOut className="h-4 w-4 mr-1" aria-hidden="true" />
+                        Logout
+                      </div>
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={handleLoginClick} 
+                    className="block sm:hidden w-full text-left py-2 text-gray-600 dark:text-dark-text-secondary hover:text-gray-900 dark:hover:text-dark-text-primary"
+                  >
+                    Login
+                  </button>
+                )}
               </div>
             </div>
           </div>

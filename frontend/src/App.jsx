@@ -7,6 +7,9 @@ import Signup from './component/auth/Signup';
 import LoadingScreen from './component/ui/LoadingScreen';
 import { LoadingProvider, useLoading } from './context/LoadingContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './component/auth/ProtectedRoute';
+import UserProfile from './component/profile/UserProfile';
 import logoLight from './assets/logo.svg';
 import logoDark from './assets/logo-dark.svg';
 
@@ -17,6 +20,8 @@ import ProjectsPage from './pages/ProjectsPage';
 import ResourcesPage from './pages/ResourcesPage';
 import AboutPage from './pages/AboutPage';
 import NotFoundPage from './pages/NotFoundPage';
+import SettingsPage from './pages/SettingsPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 
 // Create layout for auth pages
 const AuthLayout = ({ children }) => {
@@ -94,8 +99,30 @@ const ContentArea = () => {
           {/* Main site routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/events" element={<EventsPage />} />
-          <Route path="/projects" element={<ProjectsPage />} />
-          <Route path="/resources" element={<ResourcesPage />} />
+          
+          {/* Protected routes */}
+          <Route path="/projects" element={
+            <ProtectedRoute>
+              <ProjectsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/resources" element={
+            <ProtectedRoute>
+              <ResourcesPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <UserProfile />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
+          
           <Route path="/about" element={<AboutPage />} />
           
           {/* Auth routes */}
@@ -110,6 +137,12 @@ const ContentArea = () => {
             </AuthLayout>
           } />
           
+          <Route path="/forgot-password" element={
+            <AuthLayout>
+              <ForgotPasswordPage />
+            </AuthLayout>
+          } />
+          
           {/* 404 Not Found route */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
@@ -119,11 +152,14 @@ const ContentArea = () => {
 };
 
 function AppContent() {
+  const location = useLocation();
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  
   return (
     <div className="min-h-screen bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text-primary flex flex-col transition-colors duration-300">
       <Navbar />
       <ContentArea />
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
   );
 }
@@ -171,9 +207,11 @@ function App() {
   return (
     <ThemeProvider>
       <LoadingProvider>
-        <Router basename="/BLManagementSystem">
-          <AppContent />
-        </Router>
+        <AuthProvider>
+          <Router basename="/BLManagementSystem">
+            <AppContent />
+          </Router>
+        </AuthProvider>
       </LoadingProvider>
     </ThemeProvider>
   );

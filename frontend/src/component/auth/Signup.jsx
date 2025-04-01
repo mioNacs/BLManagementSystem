@@ -1,15 +1,52 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 import { 
   User, Mail, Lock, Phone, Book, School, Hash, UserCircle,
-  ChevronRight, ChevronLeft, Upload, Eye, EyeOff
+  ChevronRight, ChevronLeft, Upload, Eye, EyeOff, AlertCircle
 } from 'lucide-react'
+
+// Course options
+const courseOptions = [
+  { value: "B.Tech", label: "Bachelor of Technology" },
+  { value: "BCA", label: "Bachelor of Computer Applications" },
+  { value: "BBA", label: "Bachelor of Business Administration" },
+  { value: "Diploma", label: "Diploma" }
+];
+
+// Branch options by course
+const branchesByCourse = {
+  "B.Tech": [
+    { value: "CSE", label: "Computer Science Engineering" },
+    { value: "ECE", label: "Electronics & Communication Engineering" },
+    { value: "EEE", label: "Electrical & Electronics Engineering" },
+    { value: "ME", label: "Mechanical Engineering" },
+    { value: "CE", label: "Civil Engineering" },
+    { value: "IT", label: "Information Technology" }
+  ],
+  "Diploma": [
+    { value: "CS", label: "Computer Science" },
+    { value: "EC", label: "Electronics" },
+    { value: "ME", label: "Mechanical" },
+    { value: "CE", label: "Civil" }
+  ],
+  "BCA": [], // No branches for BCA
+  "BBA": []  // No branches for BBA
+};
 
 const Signup = () => {
   const navigate = useNavigate()
+  const { register, error: authError, clearError } = useAuth()
   const [step, setStep] = useState(1)
   const [showPassword, setShowPassword] = useState(false)
+  const [formError, setFormError] = useState(() => {
+    // Check if there's an error in sessionStorage
+    const savedError = sessionStorage.getItem("signup_error");
+    return savedError || '';
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [branchOptions, setBranchOptions] = useState([])
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -23,11 +60,59 @@ const Signup = () => {
     profilePic: null
   })
 
+  // Effect to persist error to sessionStorage
+  useEffect(() => {
+    if (formError) {
+      sessionStorage.setItem("signup_error", formError);
+    } else {
+      sessionStorage.removeItem("signup_error");
+    }
+  }, [formError]);
+
+  // Effect to set formError from context error
+  useEffect(() => {
+    if (authError) {
+      console.log("Setting form error from context:", authError);
+      setFormError(authError);
+    }
+  }, [authError]);
+
+  // Update branch options when course changes
+  useEffect(() => {
+    if (formData.course) {
+      setBranchOptions(branchesByCourse[formData.course] || []);
+      
+      // Reset branch if current selection is not valid for new course or if course has no branches
+      if (formData.branch && 
+          (branchesByCourse[formData.course]?.length === 0 || 
+           !branchesByCourse[formData.course]?.some(b => b.value === formData.branch))) {
+        setFormData(prev => ({ ...prev, branch: '' }));
+      }
+    } else {
+      setBranchOptions([]);
+    }
+  }, [formData.course]);
+
   const handleChange = (e) => {
+    const { name, value, type } = e.target;
+    
+    // Special handling for semester to ensure it's within 1-8 range
+    if (name === 'semester') {
+      const semesterValue = parseInt(value);
+      if (isNaN(semesterValue) || semesterValue < 1) {
+        setFormData({ ...formData, [name]: '' });
+      } else if (semesterValue > 8) {
+        setFormData({ ...formData, [name]: '8' });
+      } else {
+        setFormData({ ...formData, [name]: value });
+      }
+      return;
+    }
+    
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
-    })
+      [name]: value
+    });
   }
 
   const handleFileChange = (e) => {
@@ -37,21 +122,53 @@ const Signup = () => {
     })
   }
 
+  // Function to dismiss error
+  const dismissError = () => {
+    setFormError("");
+    sessionStorage.removeItem("signup_error");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Add validation for password length
+    if (formData.password && formData.password.length < 8) {
+      setFormError("Password must be at least 8 characters long");
+      return;
+    }
+    
     try {
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
-      })
-      if (response.ok) {
-        navigate('/login')
+      // Convert semester and contactNo to appropriate types
+      const userData = {
+        ...formData,
+        semester: parseInt(formData.semester),
+        contactNo: formData.contactNo ? parseInt(formData.contactNo) : undefined
       }
+      
+      setIsSubmitting(true)
+      // Use the register function from AuthContext
+      await register(userData)
+      navigate('/')
     } catch (error) {
       console.error('Signup failed:', error)
+      
+      // Handle specific error messages for duplicates
+      const errorMessage = error.message || "Registration failed. Please try again.";
+      
+      // Set more focused error messages based on the error
+      if (errorMessage.includes("Username already exists")) {
+        setFormError("This username is already taken. Please choose a different username.");
+      } else if (errorMessage.includes("Email already exists")) {
+        setFormError("This email is already registered. Please use a different email address.");
+      } else if (errorMessage.includes("Roll number already exists")) {
+        setFormError("This roll number is already registered in our system.");
+      } else if (errorMessage.includes("Contact number already exists")) {
+        setFormError("This contact number is already registered in our system.");
+      } else {
+        setFormError(errorMessage);
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -186,6 +303,60 @@ const Signup = () => {
           <>
             <h3 className="text-lg font-medium text-gray-900 dark:text-dark-text-primary mb-6">Academic Information</h3>
             <div className="space-y-4">
+              <div>
+                <label htmlFor="course" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+                  Course
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Book className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <select
+                    id="course"
+                    name="course"
+                    required
+                    className="appearance-none block w-full pl-10 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+                    value={formData.course}
+                    onChange={handleChange}
+                  >
+                    <option value="">Select Course</option>
+                    {courseOptions.map(course => (
+                      <option key={course.value} value={course.value}>
+                        {course.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {formData.course && branchesByCourse[formData.course]?.length > 0 && (
+                <div>
+                  <label htmlFor="branch" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+                    Branch
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Book className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                    </div>
+                    <select
+                      id="branch"
+                      name="branch"
+                      required
+                      className="appearance-none block w-full pl-10 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
+                      value={formData.branch}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Branch</option>
+                      {branchOptions.map(branch => (
+                        <option key={branch.value} value={branch.value}>
+                          {branch.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="semester" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
@@ -208,69 +379,30 @@ const Signup = () => {
                       onChange={handleChange}
                     />
                   </div>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Enter a value between 1 and 8
+                  </p>
                 </div>
                 
                 <div>
-                  <label htmlFor="branch" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
-                    Branch
+                  <label htmlFor="rollNo" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
+                    Roll Number
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <Book className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                      <Hash className="h-5 w-5 text-gray-400 dark:text-gray-500" />
                     </div>
                     <input
-                      id="branch"
-                      name="branch"
+                      id="rollNo"
+                      name="rollNo"
                       type="text"
                       required
                       className="appearance-none block w-full pl-10 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
-                      placeholder="Computer Science"
-                      value={formData.branch}
+                      placeholder="22CSE08"
+                      value={formData.rollNo}
                       onChange={handleChange}
                     />
                   </div>
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="rollNo" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
-                  Roll Number
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Hash className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                  </div>
-                  <input
-                    id="rollNo"
-                    name="rollNo"
-                    type="text"
-                    required
-                    className="appearance-none block w-full pl-10 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
-                    placeholder="e.g. CS21001"
-                    value={formData.rollNo}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label htmlFor="course" className="block text-sm font-medium text-gray-700 dark:text-dark-text-secondary mb-1">
-                  Course
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Book className="h-5 w-5 text-gray-400 dark:text-gray-500" />
-                  </div>
-                  <input
-                    id="course"
-                    name="course"
-                    type="text"
-                    required
-                    className="appearance-none block w-full pl-10 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
-                    placeholder="e.g. B.Tech"
-                    value={formData.course}
-                    onChange={handleChange}
-                  />
                 </div>
               </div>
             </div>
@@ -318,9 +450,9 @@ const Signup = () => {
                     onChange={handleChange}
                   >
                     <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>
@@ -394,9 +526,10 @@ const Signup = () => {
               </button>
               <button
                 type="submit"
-                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 w-full sm:w-auto order-1 sm:order-2"
+                disabled={isSubmitting}
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 w-full sm:w-auto order-1 sm:order-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create Account
+                {isSubmitting ? 'Creating Account...' : 'Create Account'}
               </button>
             </div>
           </>
@@ -408,29 +541,39 @@ const Signup = () => {
   }
 
   return (
-    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center bg-gray-50 dark:bg-dark-bg py-6 sm:py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-dark-bg py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
+      <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <h2 className="mt-6 text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-dark-text-primary">
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-dark-text-primary">
             Join BitLinguals
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-dark-text-secondary">
-            Create your account to get started
+            Create your account in a few simple steps
           </p>
         </div>
         
-        <div className="mt-6 sm:mt-8 bg-white dark:bg-dark-card rounded-lg shadow-md dark:shadow-lg py-6 sm:py-8 px-4 sm:px-6 transition-all duration-300">
+        <div className="mt-8 bg-white dark:bg-dark-card rounded-lg shadow-md dark:shadow-lg py-8 px-6 transition-all duration-300">
           {renderProgressBar()}
           
-          <form onSubmit={handleSubmit}>
+          {/* Simple inline error message */}
+          {formError && (
+            <div className="mb-6 bg-red-100 border border-red-400 rounded-md px-4 py-3 text-red-700">
+              <div className="flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2" />
+                <p>{formError}</p>
+              </div>
+            </div>
+          )}
+          
+          <form onSubmit={step === 3 ? handleSubmit : undefined}>
             {renderForm()}
           </form>
           
-          <div className="mt-6 text-center text-sm">
-            <p className="text-gray-600 dark:text-dark-text-muted">
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 dark:text-dark-text-secondary">
               Already have an account?{' '}
               <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300">
-                Sign in
+                Log in
               </Link>
             </p>
           </div>
