@@ -1,21 +1,16 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './component/navbar/Navbar';
-import Hero from './component/hero/Hero';
-import Section from './component/hero/Section';
 import Footer from './component/footer/Footer';
 import Login from './component/auth/Login';
 import Signup from './component/auth/Signup';
 
-// Create a layout component for the main page
-const MainLayout = () => {
-  return (
-    <div className="pt-16">
-      <Hero />
-      <Section />
-    </div>
-  );
-};
+// Import page components
+import HomePage from './pages/HomePage';
+import EventsPage from './pages/EventsPage';
+import ProjectsPage from './pages/ProjectsPage';
+import ResourcesPage from './pages/ResourcesPage';
+import AboutPage from './pages/AboutPage';
 
 // Create layout for auth pages
 const AuthLayout = ({ children }) => {
@@ -32,7 +27,14 @@ function App() {
       <div className="min-h-screen bg-white">
         <Navbar />
         <Routes>
-          <Route path="/" element={<MainLayout />} />
+          {/* Main site routes */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/projects" element={<ProjectsPage />} />
+          <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          
+          {/* Auth routes */}
           <Route path="/login" element={
             <AuthLayout>
               <Login />
@@ -43,6 +45,8 @@ function App() {
               <Signup />
             </AuthLayout>
           } />
+          
+          {/* Fallback route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         <Footer />
