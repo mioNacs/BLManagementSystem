@@ -20,17 +20,17 @@ const Navbar = () => {
     setIsMenuOpen(false)
   }, [])
 
-  const handleSignUpClick = useCallback((e) => {
+  const handleLoginClick = useCallback((e) => {
     e.preventDefault()
     navigate('/login')
     handleMenuClose()
-  }, [navigate])
+  }, [navigate, handleMenuClose])
   
-  const handleLoginClick = useCallback((e) => {
+  const handleSignUpClick = useCallback((e) => {
     e.preventDefault()
     navigate('/signup')
     handleMenuClose()
-  }, [navigate])
+  }, [navigate, handleMenuClose])
 
   const navLinks = [
     { to: "/", text: "Home" },
@@ -62,13 +62,13 @@ const Navbar = () => {
           {/* Auth Buttons & Mobile Menu Toggle */}
           <div className="flex items-center space-x-3 md:space-x-4">
             <button 
-              onClick={handleSignUpClick} 
+              onClick={handleLoginClick} 
               className="text-gray-600 hover:text-gray-900 text-sm md:text-base transition-colors duration-200"
             >
               Login
             </button>
             <button 
-              onClick={handleLoginClick} 
+              onClick={handleSignUpClick} 
               className="bg-black text-white px-3 py-1.5 md:px-4 md:py-2 rounded-md hover:bg-gray-800 text-sm md:text-base transition-colors duration-200"
             >
               Join Us
