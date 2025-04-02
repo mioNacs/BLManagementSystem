@@ -19,22 +19,31 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user is already logged in on mount
   useEffect(() => {
-    const checkAuth = async () => {
+    // For development only - bypass authentication check using environment variable
+    const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
+    if (bypassAuth) {
+      console.log("AUTH BYPASS ENABLED - All sections are public temporarily");
+      setUser({ username: 'GuestUser', email: 'guest@example.com' });
+      setLoading(false);
+      return;
+    }
+    
+    const verifyUser = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
         const response = await axios.get('/api/auth/me');
         if (response.data.success) {
           setUser(response.data.user);
         }
       } catch (err) {
-        // User is not authenticated, no need to set error
+        // Silent failure - user is not logged in
         setUser(null);
       } finally {
         setLoading(false);
       }
     };
-
-    checkAuth();
+    
+    verifyUser();
   }, []);
 
   // Register function

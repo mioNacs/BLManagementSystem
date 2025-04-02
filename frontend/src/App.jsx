@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Navbar from './component/navbar/Navbar';
 import Footer from './component/footer/Footer';
 import Login from './component/auth/Login';
@@ -208,7 +208,7 @@ function App() {
     <ThemeProvider>
       <LoadingProvider>
         <AuthProvider>
-          <Router basename="/BLManagementSystem">
+          <Router>
             <AppContent />
           </Router>
         </AuthProvider>
