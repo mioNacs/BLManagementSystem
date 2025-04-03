@@ -68,17 +68,8 @@ export const registerUser = async (req, res) => {
     await user.save();
     
     // Set cookies
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 15 * 60 * 1000 // 15 minutes
-    });
-    
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie("accessToken", accessToken, setCookieOptions(req));
+    res.cookie("refreshToken", refreshToken, setRefreshCookieOptions(req));
     
     return res.status(201).json({
       success: true,
@@ -151,17 +142,8 @@ export const loginUser = async (req, res) => {
     await user.save();
     
     // Set cookies
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 15 * 60 * 1000 // 15 minutes
-    });
-    
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    res.cookie("accessToken", accessToken, setCookieOptions(req));
+    res.cookie("refreshToken", refreshToken, setRefreshCookieOptions(req));
     
     console.log("Login successful for user:", user.username);
     return res.status(200).json({
@@ -244,17 +226,8 @@ export const refreshAccessToken = async (req, res) => {
     await user.save();
     
     // Set cookies
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 15 * 60 * 1000
-    });
-    
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie("accessToken", accessToken, setCookieOptions(req));
+    res.cookie("refreshToken", refreshToken, setRefreshCookieOptions(req));
     
     return res.status(200).json({
       success: true,
@@ -561,4 +534,25 @@ export const updateProfile = async (req, res) => {
       message: error.message || "Failed to update profile"
     });
   }
+};
+
+// Helper function for setting secure cookies
+const setCookieOptions = (req) => {
+  const isProduction = process.env.NODE_ENV === "production";
+  const domain = isProduction ? ".vercel.app" : "localhost";
+  
+  return {
+    httpOnly: true,
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
+    domain: isProduction ? domain : undefined,
+    path: '/',
+    maxAge: 15 * 60 * 1000 // 15 minutes for access token
+  };
+};
+
+const setRefreshCookieOptions = (req) => {
+  const options = setCookieOptions(req);
+  options.maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days for refresh token
+  return options;
 }; 
