@@ -7,54 +7,53 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [formError, setFormError] = useState(""); // No sessionStorage, so it will clear on refresh
+  const [formError, setFormError] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
-  const { login, error, clearError, user, loading } = useAuth();
+  const { login, error, clearError, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Effect to set formError from context error - but using our custom message
+  // Effect to set formError from context error
   useEffect(() => {
-    console.log("Auth context error changed:", error);
     if (error) {
-      console.log("Setting form error from context:", error);
-      // Display specific error messages from the backend directly in the UI
       setFormError(error);
+      setIsLoading(false); // Reset loading state when error occurs
     }
   }, [error]);
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user && !loading) {
+    if (user) {
       const from = location.state?.from || "/";
       navigate(from, { replace: true });
     }
-  }, [user, loading, navigate, location]);
+  }, [user, navigate, location]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Only clear errors if form is valid
+    // Form validation
     if (!emailOrUsername || !password) {
       setFormError("Please enter both username/email and password");
       return;
     }
     
-    // Clear error at this point, when we know the form is valid
+    // Clear previous errors and set loading state
     setFormError("");
     clearError();
+    setIsLoading(true);
     
     try {
-      await login(emailOrUsername, password);
-      // Navigation will be handled by the useEffect
+      const result = await login(emailOrUsername, password);
+      if (!result.success) {
+        setFormError(result.message || "Login failed");
+        setIsLoading(false);
+      }
     } catch (err) {
-      console.log("Error in login submit:", err);
-      // The error is already set in the AuthContext and will be displayed by the useEffect
-      
-      // Stop the form submission and prevent any redirects
-      e.preventDefault();
-      e.stopPropagation();
+      // The error state from context will be handled by the useEffect
+      setIsLoading(false);
     }
   };
 
@@ -71,9 +70,8 @@ const Login = () => {
         </div>
         
         <div className="mt-8 bg-white dark:bg-dark-card rounded-lg shadow-md dark:shadow-lg py-8 px-6 transition-all duration-300">
-          {/* Simple inline error message */}
           {formError && (
-            <div className="mb-6 bg-red-100 border border-red-400 rounded-md px-4 py-3 text-red-700">
+            <div className="mb-6 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 rounded-md px-4 py-3 text-red-700 dark:text-red-400">
               <div className="flex items-center">
                 <AlertCircle className="h-5 w-5 mr-2" />
                 <p>{formError}</p>
@@ -99,7 +97,10 @@ const Login = () => {
                     value={emailOrUsername}
                     onChange={(e) => {
                       setEmailOrUsername(e.target.value);
-                      // Don't clear errors when inputs change
+                      if (formError) {
+                        setFormError("");
+                        clearError();
+                      }
                     }}
                     required
                     className="appearance-none block w-full pl-10 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
@@ -125,7 +126,10 @@ const Login = () => {
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
-                      // Don't clear errors when inputs change
+                      if (formError) {
+                        setFormError("");
+                        clearError();
+                      }
                     }}
                     required
                     className="appearance-none block w-full pl-10 pr-10 px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 bg-white dark:bg-dark-card text-gray-900 dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200"
@@ -176,14 +180,14 @@ const Login = () => {
             <div>
               <button
                 type="submit"
-                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200"
-                disabled={loading}
+                className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 dark:bg-primary-700 dark:hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading}
                 aria-label="Sign in"
               >
                 <span className="absolute left-0 inset-y-0 flex items-center pl-3">
                   <LogIn className="h-5 w-5 text-primary-500 dark:text-primary-400 group-hover:text-primary-400 dark:group-hover:text-primary-300" aria-hidden="true" />
                 </span>
-                {loading ? 'Signing in...' : 'Sign in'}
+                {isLoading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>

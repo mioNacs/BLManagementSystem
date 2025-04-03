@@ -49,6 +49,19 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Fetch full user data
+  const fetchUserData = async () => {
+    try {
+      const response = await axios.get('/api/auth/me');
+      if (response.data.success) {
+        setUser(response.data.user);
+      }
+    } catch (err) {
+      console.error('Failed to fetch user data:', err);
+      setUser(null);
+    }
+  };
+
   // Check if user is already logged in on mount
   useEffect(() => {
     // For development only - bypass authentication check using environment variable
@@ -60,22 +73,52 @@ export const AuthProvider = ({ children }) => {
       return;
     }
     
-    const verifyUser = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get('/api/auth/me');
-        if (response.data.success) {
-          setUser(response.data.user);
-        }
-      } catch (err) {
-        // Silent failure - user is not logged in
+    fetchUserData();
+    setLoading(false);
+
+    // Set up token refresh interval
+    const refreshInterval = setInterval(async () => {
+      const success = await refreshToken();
+      if (!success) {
+        // If token refresh fails, log out the user
         setUser(null);
-      } finally {
-        setLoading(false);
+        clearInterval(refreshInterval);
       }
+    }, 14 * 60 * 1000); // Refresh token every 14 minutes (assuming 15-minute token expiry)
+
+    // Clean up interval on unmount
+    return () => clearInterval(refreshInterval);
+  }, []);
+
+  // Add axios interceptor for handling 401 responses
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        // Skip token refresh for login/register endpoints
+        const isAuthEndpoint = error.config.url.includes('/api/auth/login') || 
+                             error.config.url.includes('/api/auth/register');
+        
+        if (error.response?.status === 401 && !isAuthEndpoint && error.config && !error.config.__isRetry) {
+          try {
+            error.config.__isRetry = true;
+            const success = await refreshToken();
+            if (success) {
+              // Retry the original request
+              return axios(error.config);
+            }
+          } catch (e) {
+            // If refresh fails, log out the user
+            setUser(null);
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    return () => {
+      axios.interceptors.response.eject(interceptor);
     };
-    
-    verifyUser();
   }, []);
 
   // Register function
@@ -86,7 +129,8 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.post('/api/auth/register', userData);
       
       if (response.data.success) {
-        setUser(response.data.user);
+        // Fetch full user data after successful registration
+        await fetchUserData();
       }
       
       return response.data;
@@ -103,49 +147,29 @@ export const AuthProvider = ({ children }) => {
   const login = async (emailOrUsername, password) => {
     try {
       setLoading(true);
-      setError(null); // Clear previous errors
+      setError(null);
       
-      // Determine if input is email or username
       const isEmail = emailOrUsername.includes('@');
       const loginData = isEmail 
         ? { email: emailOrUsername, password } 
         : { username: emailOrUsername, password };
       
-      console.log("Preparing login request to:", `${API_URL}/api/auth/login`);
-      console.log("Login data:", { ...loginData, password: '****' });
+      console.log("Sending login request to:", `${API_URL}/api/auth/login`);
       
-      // Try the login with explicit configuration
+      // Try the login
       const response = await axios.post('/api/auth/login', loginData, {
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        withCredentials: true,
-        validateStatus: function (status) {
-          return status >= 200 && status < 500; // Don't reject if status is not 2xx
+          'Content-Type': 'application/json'
         }
       });
       
-      console.log("Login response received:", {
-        status: response.status,
-        statusText: response.statusText,
-        data: response.data,
-        headers: response.headers
-      });
+      console.log("Login response:", response.data);
       
       if (response.data.success) {
         setUser(response.data.user);
-        return response.data;
-      } else {
-        throw new Error(response.data.message || 'Login failed');
       }
     } catch (err) {
-      console.error("Login error details:", {
-        message: err.message,
-        response: err.response?.data,
-        status: err.response?.status,
-        headers: err.response?.headers
-      });
+      console.error("Login error:", err);
       
       // Format the error message to be more user-friendly
       let errorMessage;
@@ -166,7 +190,7 @@ export const AuthProvider = ({ children }) => {
         errorMessage = "Login failed. Please try again.";
       }
       
-      console.log("Setting error message:", errorMessage);
+      console.log("Setting error:", errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -244,7 +268,9 @@ export const AuthProvider = ({ children }) => {
     refreshToken,
     clearError,
     forgotPassword,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    setUser,
+    fetchUserData
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -257,4 +283,6 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};
+
+export default AuthProvider; 

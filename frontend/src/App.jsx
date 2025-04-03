@@ -153,13 +153,21 @@ const ContentArea = () => {
 
 function AppContent() {
   const location = useLocation();
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  const hideFooterPaths = [
+    '/login',
+    '/signup',
+    '/settings',
+    '/profile',
+    '/404',
+    '*'
+  ];
+  const shouldShowFooter = !hideFooterPaths.includes(location.pathname);
   
   return (
     <div className="min-h-screen bg-white dark:bg-dark-bg text-gray-900 dark:text-dark-text-primary flex flex-col transition-colors duration-300">
       <Navbar />
       <ContentArea />
-      {!isAuthPage && <Footer />}
+      {shouldShowFooter && <Footer />}
     </div>
   );
 }

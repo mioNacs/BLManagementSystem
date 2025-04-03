@@ -415,4 +415,150 @@ export const resetPassword = async (req, res) => {
       message
     });
   }
+};
+
+// Change password
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Current password and new password are required"
+      });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    // Verify current password
+    const isPasswordValid = await user.comparePassword(currentPassword);
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect"
+      });
+    }
+
+    // Update password
+    user.password = newPassword; // The pre-save hook will hash it
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Password has been changed successfully"
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to change password"
+    });
+  }
+};
+
+// Update user profile
+export const updateProfile = async (req, res) => {
+  try {
+    const { username, email, contactNo, semester, branch, rollNo, course } = req.body;
+    const userId = req.user.id;
+
+    // Check for duplicate username if username is being changed
+    if (username) {
+      const existingUsername = await User.findOne({ 
+        username, 
+        _id: { $ne: userId } 
+      });
+      if (existingUsername) {
+        return res.status(409).json({ 
+          success: false, 
+          message: "Username already exists. Please choose a different username." 
+        });
+      }
+    }
+
+    // Check for duplicate email if email is being changed
+    if (email) {
+      const existingEmail = await User.findOne({ 
+        email: { $regex: new RegExp(`^${email}$`, 'i') }, 
+        _id: { $ne: userId } 
+      });
+      if (existingEmail) {
+        return res.status(409).json({ 
+          success: false, 
+          message: "Email already exists. Please use a different email address." 
+        });
+      }
+    }
+
+    // Check for duplicate roll number if being changed
+    if (rollNo) {
+      const existingRollNo = await User.findOne({ 
+        rollNo, 
+        _id: { $ne: userId } 
+      });
+      if (existingRollNo) {
+        return res.status(409).json({ 
+          success: false, 
+          message: "Roll number already exists in our system." 
+        });
+      }
+    }
+
+    // Check for duplicate contact number if being changed
+    if (contactNo) {
+      const existingContactNo = await User.findOne({ 
+        contactNo, 
+        _id: { $ne: userId } 
+      });
+      if (existingContactNo) {
+        return res.status(409).json({ 
+          success: false, 
+          message: "Contact number already exists in our system." 
+        });
+      }
+    }
+
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          username,
+          email,
+          contactNo,
+          semester,
+          branch,
+          rollNo,
+          course
+        }
+      },
+      { new: true, runValidators: true }
+    ).select('-password -refreshToken');
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: updatedUser,
+      message: "Profile updated successfully"
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update profile"
+    });
+  }
 }; 
