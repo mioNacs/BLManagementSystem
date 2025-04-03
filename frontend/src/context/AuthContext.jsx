@@ -5,11 +5,43 @@ import axios from 'axios';
 const AuthContext = createContext(null);
 
 // Base URL for API requests
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = window.location.hostname === 'mionacs.github.io' 
+  ? 'https://blms-orcin.vercel.app'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:5000');
 
 // Configure axios
 axios.defaults.baseURL = API_URL;
 axios.defaults.withCredentials = true; // Enable sending cookies with requests
+
+// Add debug logging
+console.log('Current hostname:', window.location.hostname);
+console.log('Using API URL:', API_URL);
+
+// Configure axios defaults for better error handling
+axios.defaults.timeout = 10000; // 10 second timeout
+axios.defaults.headers.common['Accept'] = 'application/json';
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+// Add axios interceptor for debugging
+axios.interceptors.request.use(request => {
+  console.log('Starting Request:', request.method, request.url);
+  return request;
+});
+
+axios.interceptors.response.use(
+  response => {
+    console.log('Response:', response.status, response.data);
+    return response;
+  },
+  error => {
+    console.error('API Error:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      config: error.config
+    });
+    return Promise.reject(error);
+  }
+);
 
 // Create auth provider component
 export const AuthProvider = ({ children }) => {
@@ -79,36 +111,50 @@ export const AuthProvider = ({ children }) => {
         ? { email: emailOrUsername, password } 
         : { username: emailOrUsername, password };
       
-      console.log("Sending login request to:", `${API_URL}/api/auth/login`);
+      console.log("Preparing login request to:", `${API_URL}/api/auth/login`);
+      console.log("Login data:", { ...loginData, password: '****' });
       
-      // Try the login
+      // Try the login with explicit configuration
       const response = await axios.post('/api/auth/login', loginData, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        withCredentials: true,
+        validateStatus: function (status) {
+          return status >= 200 && status < 500; // Don't reject if status is not 2xx
         }
       });
       
-      console.log("Login response:", response.data);
+      console.log("Login response received:", {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+        headers: response.headers
+      });
       
       if (response.data.success) {
         setUser(response.data.user);
+        return response.data;
+      } else {
+        throw new Error(response.data.message || 'Login failed');
       }
-      
-      return response.data;
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Login error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        headers: err.response?.headers
+      });
       
       // Format the error message to be more user-friendly
       let errorMessage;
       
       if (!err.response) {
-        // Network error
         errorMessage = "Cannot connect to server. Please check your internet connection.";
       } else if (err.response.status === 404) {
-        // Username/email not found
         errorMessage = "Invalid username or email.";
       } else if (err.response.status === 401) {
-        // Password error
         errorMessage = "Invalid password.";
       } else if (err.response.status === 400) {
         errorMessage = "Please provide both username/email and password.";
@@ -120,7 +166,7 @@ export const AuthProvider = ({ children }) => {
         errorMessage = "Login failed. Please try again.";
       }
       
-      console.log("Setting error:", errorMessage);
+      console.log("Setting error message:", errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
