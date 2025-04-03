@@ -1,5 +1,6 @@
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
+import { getAccessCookieOptions, getRefreshCookieOptions } from "../utils/cookieOptions.js";
 
 // Register a new user
 export const registerUser = async (req, res) => {
@@ -142,8 +143,8 @@ export const loginUser = async (req, res) => {
     await user.save();
     
     // Set cookies
-    res.cookie("accessToken", accessToken, setCookieOptions(req));
-    res.cookie("refreshToken", refreshToken, setRefreshCookieOptions(req));
+    res.cookie("accessToken", accessToken, getAccessCookieOptions(req));
+    res.cookie("refreshToken", refreshToken, getRefreshCookieOptions(req));
     
     console.log("Login successful for user:", user.username);
     return res.status(200).json({
@@ -168,8 +169,9 @@ export const loginUser = async (req, res) => {
 export const logoutUser = async (req, res) => {
   try {
     // Clear cookies
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
+    const cookieOptions = getAccessCookieOptions(req);
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
     
     // Update user in database
     const user = await User.findById(req.user.id);
@@ -226,8 +228,8 @@ export const refreshAccessToken = async (req, res) => {
     await user.save();
     
     // Set cookies
-    res.cookie("accessToken", accessToken, setCookieOptions(req));
-    res.cookie("refreshToken", refreshToken, setRefreshCookieOptions(req));
+    res.cookie("accessToken", accessToken, getAccessCookieOptions(req));
+    res.cookie("refreshToken", refreshToken, getRefreshCookieOptions(req));
     
     return res.status(200).json({
       success: true,

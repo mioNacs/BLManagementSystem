@@ -12,8 +12,7 @@ const corsOptions = {
     'http://localhost:5174', 
     'http://localhost:5173', 
     'http://localhost:3000',
-    'https://mionacs.github.io',
-    'https://blms-orcin.vercel.app'
+    'https://mionacs.github.io'
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
@@ -27,17 +26,29 @@ const corsOptions = {
     "Access-Control-Request-Method",
     "Access-Control-Request-Headers"
   ],
-  exposedHeaders: ["Set-Cookie"],
+  exposedHeaders: ["set-cookie"],
   maxAge: 86400 // 24 hours in seconds
 };
+
+// Add pre-flight response headers
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (corsOptions.origin.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', corsOptions.methods.join(','));
+  res.setHeader('Access-Control-Allow-Headers', corsOptions.allowedHeaders.join(','));
+  next();
+});
+
+app.use(cors(corsOptions));
 
 // Request logging middleware
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
 });
-
-app.use(cors(corsOptions));
 
 // API health check endpoint
 app.get('/', (req, res) => {

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
 
 // Create auth context
@@ -48,6 +48,9 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshAttempts = useRef(0);
+  const refreshTimeout = useRef(null);
 
   // Fetch full user data
   const fetchUserData = async () => {
@@ -55,6 +58,7 @@ export const AuthProvider = ({ children }) => {
       const response = await axios.get('/api/auth/me');
       if (response.data.success) {
         setUser(response.data.user);
+        refreshAttempts.current = 0; // Reset refresh attempts on successful data fetch
       }
     } catch (err) {
       console.error('Failed to fetch user data:', err);
@@ -62,9 +66,47 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Refresh token function with rate limiting
+  const refreshToken = async () => {
+    if (isRefreshing || refreshAttempts.current >= 3) {
+      return false;
+    }
+
+    try {
+      setIsRefreshing(true);
+      const response = await axios.post('/api/auth/refresh-token');
+      if (response.data.success) {
+        refreshAttempts.current = 0;
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      refreshAttempts.current += 1;
+      return false;
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Schedule next token refresh
+  const scheduleTokenRefresh = () => {
+    if (refreshTimeout.current) {
+      clearTimeout(refreshTimeout.current);
+    }
+
+    refreshTimeout.current = setTimeout(async () => {
+      const success = await refreshToken();
+      if (success) {
+        scheduleTokenRefresh(); // Schedule next refresh
+      } else if (refreshAttempts.current >= 3) {
+        setUser(null); // Log out after 3 failed attempts
+      }
+    }, 10 * 60 * 1000); // Refresh every 10 minutes
+  };
+
   // Check if user is already logged in on mount
   useEffect(() => {
-    // For development only - bypass authentication check using environment variable
     const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
     if (bypassAuth) {
       console.log("AUTH BYPASS ENABLED - All sections are public temporarily");
@@ -76,39 +118,48 @@ export const AuthProvider = ({ children }) => {
     fetchUserData();
     setLoading(false);
 
-    // Set up token refresh interval
-    const refreshInterval = setInterval(async () => {
-      const success = await refreshToken();
-      if (!success) {
-        // If token refresh fails, log out the user
-        setUser(null);
-        clearInterval(refreshInterval);
+    // Clean up function
+    return () => {
+      if (refreshTimeout.current) {
+        clearTimeout(refreshTimeout.current);
       }
-    }, 14 * 60 * 1000); // Refresh token every 14 minutes (assuming 15-minute token expiry)
-
-    // Clean up interval on unmount
-    return () => clearInterval(refreshInterval);
+    };
   }, []);
+
+  // Set up refresh scheduling when user changes
+  useEffect(() => {
+    if (user) {
+      scheduleTokenRefresh();
+    }
+    return () => {
+      if (refreshTimeout.current) {
+        clearTimeout(refreshTimeout.current);
+      }
+    };
+  }, [user]);
 
   // Add axios interceptor for handling 401 responses
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       async (error) => {
-        // Skip token refresh for login/register endpoints
-        const isAuthEndpoint = error.config.url.includes('/api/auth/login') || 
-                             error.config.url.includes('/api/auth/register');
+        const originalRequest = error.config;
         
-        if (error.response?.status === 401 && !isAuthEndpoint && error.config && !error.config.__isRetry) {
+        // Skip token refresh for auth endpoints and already retried requests
+        const isAuthEndpoint = originalRequest.url.includes('/api/auth/login') || 
+                             originalRequest.url.includes('/api/auth/register') ||
+                             originalRequest.url.includes('/api/auth/refresh-token');
+        
+        if (error.response?.status === 401 && !isAuthEndpoint && !originalRequest._retry) {
+          originalRequest._retry = true;
+          
           try {
-            error.config.__isRetry = true;
             const success = await refreshToken();
             if (success) {
-              // Retry the original request
-              return axios(error.config);
+              return axios(originalRequest);
             }
-          } catch (e) {
-            // If refresh fails, log out the user
+          } catch (refreshError) {
+            console.error('Failed to refresh token:', refreshError);
             setUser(null);
           }
         }
@@ -148,6 +199,7 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       setError(null);
+      refreshAttempts.current = 0; // Reset refresh attempts on login
       
       const isEmail = emailOrUsername.includes('@');
       const loginData = isEmail 
@@ -174,6 +226,7 @@ export const AuthProvider = ({ children }) => {
           const userResponse = await axios.get('/api/auth/me');
           if (userResponse.data.success) {
             setUser(userResponse.data.user);
+            scheduleTokenRefresh(); // Start token refresh scheduling
           }
         } catch (fetchError) {
           console.error('Failed to fetch complete user data:', fetchError);
@@ -185,9 +238,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error("Login error:", err);
       
-      // Format the error message to be more user-friendly
       let errorMessage;
-      
       if (!err.response) {
         errorMessage = "Cannot connect to server. Please check your internet connection.";
       } else if (err.response.status === 404) {
@@ -204,7 +255,6 @@ export const AuthProvider = ({ children }) => {
         errorMessage = "Login failed. Please try again.";
       }
       
-      console.log("Setting error:", errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -218,21 +268,15 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       await axios.post('/api/auth/logout');
       setUser(null);
+      if (refreshTimeout.current) {
+        clearTimeout(refreshTimeout.current);
+      }
+      refreshAttempts.current = 0;
     } catch (err) {
       const message = err.response?.data?.message || 'Logout failed';
       setError(message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Refresh token function
-  const refreshToken = async () => {
-    try {
-      const response = await axios.post('/api/auth/refresh-token');
-      return response.data.success;
-    } catch (err) {
-      return false;
     }
   };
 
