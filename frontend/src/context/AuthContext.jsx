@@ -157,17 +157,31 @@ export const AuthProvider = ({ children }) => {
       console.log("Sending login request to:", `${API_URL}/api/auth/login`);
       
       // Try the login
-      const response = await axios.post('/api/auth/login', loginData, {
+      const loginResponse = await axios.post('/api/auth/login', loginData, {
         headers: {
           'Content-Type': 'application/json'
         }
       });
       
-      console.log("Login response:", response.data);
+      console.log("Login response:", loginResponse.data);
       
-      if (response.data.success) {
-        setUser(response.data.user);
+      if (loginResponse.data.success) {
+        // Set initial user data from login response
+        setUser(loginResponse.data.user);
+        
+        try {
+          // Fetch complete user data
+          const userResponse = await axios.get('/api/auth/me');
+          if (userResponse.data.success) {
+            setUser(userResponse.data.user);
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch complete user data:', fetchError);
+          // Don't throw here, as login was successful
+        }
       }
+
+      return loginResponse.data;
     } catch (err) {
       console.error("Login error:", err);
       
