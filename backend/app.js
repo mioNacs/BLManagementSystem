@@ -7,10 +7,18 @@ const app = express();
 
 // Configure CORS based on environment
 const corsOptions = {
-  origin: [process.env.CORS_ORIGIN, 'http://localhost:5174', 'http://localhost:5173', 'http://localhost:3000'],
+  origin: [
+    process.env.CORS_ORIGIN, 
+    'http://localhost:5174', 
+    'http://localhost:5173', 
+    'http://localhost:3000',
+    'https://mionacs.github.io',
+    'https://blms-orcin.vercel.app'
+  ],
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["set-cookie"]
 };
 
 // Request logging middleware
