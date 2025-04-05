@@ -6,6 +6,13 @@ import { getAccessCookieOptions, getRefreshCookieOptions } from "../utils/cookie
 export const registerUser = async (req, res) => {
   try {
     const { username, email, password, gender, semester, branch, rollNo, course, contactNo } = req.body;
+
+    if (!username || !email || !password || !gender || !semester || !branch || !rollNo || !course || !contactNo) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required"
+      });    
+    }
     
     // Check for duplicate username
     const existingUsername = await User.findOne({ username });

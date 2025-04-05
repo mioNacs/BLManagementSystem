@@ -62,26 +62,20 @@ app.use(express.urlencoded({extended:true}));
 // this configuration is used for storing some static data in public folder
 app.use(express.static("public"))
 
-app.use((req, res, next) => {
-    console.log("from global middleware",req.body)
-    next()
-});
 
 //this is used to read the cookie form browser 
 app.use(cookieParser())
-app.get("/", (req, res) => {
-    res.send("Welcome to the backend of the project")
-})
 
 import { userRouter } from "./routes/user.route.js";
-app.use("/api/user", (req,res,next) =>{
-console.log(req.body)
-next()
-},  userRouter)//this is used to use the user router for the api/user route
+app.use("/api/user",  userRouter)//this is used to use the user router for the api/user route
 
 // Routes
-console.log("Registering auth routes at /api/auth");
+
 app.use("/api/auth", authRoutes);
+
+// event routes
+import eventRouter from "./routes/event.routes.js";
+app.use("/api/event", eventRouter);
 
 // Direct login route for testing 
 app.post('/direct-login', (req, res) => {
