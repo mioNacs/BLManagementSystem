@@ -1,0 +1,23 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main Feather Body -->
+  <path d="M120 30C135 50 142 80 130 130C125 155 115 180 112 185" stroke="#8F8DDB" stroke-width="3"/>
+  <path d="M112 185C112 190 114 195 117 195C120 195 122 190 122 185" stroke="#8F8DDB" stroke-width="2.5"/>
+  
+  <!-- Feather Body Fill -->
+  <path d="M120 30C105 50 90 90 90 140C90 160 100 185 112 185" fill="#7A78CD"/>
+  
+  <!-- Feather Cuts/Details -->
+  <path d="M120 50L105 63" stroke="#1A1A2E" stroke-width="2.5"/>
+  <path d="M118 80L100 93" stroke="#1A1A2E" stroke-width="2.5"/>
+  <path d="M115 110L100 123" stroke="#1A1A2E" stroke-width="2.5"/>
+  <path d="M112 145L98 157" stroke="#1A1A2E" stroke-width="2.5"/>
+  
+  <!-- Feather Right Side Cuts -->
+  <path d="M122 70L135 63" stroke="#1A1A2E" stroke-width="2.5"/>
+  <path d="M120 100L132 93" stroke="#1A1A2E" stroke-width="2.5"/>
+  <path d="M118 130L130 123" stroke="#1A1A2E" stroke-width="2.5"/>
+  
+  <!-- Green Brackets -->
+  <path d="M70 70C55 85 45 100 45 120C45 140 57 155 75 165" stroke="#5AE848" stroke-width="12" stroke-linecap="round"/>
+  <path d="M170 165C185 155 195 140 195 120C195 100 185 85 170 70" stroke="#5AE848" stroke-width="12" stroke-linecap="round"/>
+</svg> 
