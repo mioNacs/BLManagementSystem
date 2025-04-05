@@ -14,8 +14,22 @@ app.use(express.urlencoded({extended:true}));
 // this configuration is used for storing some static data in public folder
 app.use(express.static("public"))
 
+app.use((req, res, next) => {
+    console.log("from global middleware",req.body)
+    next()
+});
+
 //this is used to read the cookie form browser 
 app.use(cookieParser())
+app.get("/", (req, res) => {
+    res.send("Welcome to the backend of the project")
+})
+
+import { userRouter } from "./routes/user.route.js";
+app.use("/api/user", (req,res,next) =>{
+console.log(req.body)
+next()
+},  userRouter)//this is used to use the user router for the api/user route
 
 
 export {app};//this is used to export the app object so that we can use it in other files
