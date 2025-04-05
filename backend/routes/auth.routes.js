@@ -5,7 +5,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = Router();
 
 // Public routes
-router.post("/register", registerUser);
+router.post("/register",(req,res,next) => {console.log("Register request received:", req.body); next()}, registerUser);
 console.log("Login route defined at /api/auth/login");
 router.post("/login", (req, res, next) => {
   console.log("Login request received:", req.body);
